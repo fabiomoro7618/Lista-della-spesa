@@ -1,0 +1,19 @@
+# Unity
+**/Library/
+**/Temp/
+**/Obj/
+**/Build/
+**/Builds/
+**/Logs/
+**/UserSettings/
+
+# File sensibili e scorciatoie
+anthropic key.txt
+*.lnk
+SharedScreenshot.jpg
+_backup ShoppingListBackup/
+
+# Python
+**/__pycache__/
+*.pyc
+.venv/

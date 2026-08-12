@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aggiorna Lista Spesa</title>
+    <style>
+        body { font-family: system-ui, sans-serif; background: #f4f6f8; margin: 0; padding: 20px; display: flex; justify-content: center; }
+        .card { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); max-width: 520px; width: 100%; }
+        h1 { font-size: 1.4rem; color: #1a202c; margin-bottom: 20px; text-align: center; }
+        .field { margin-bottom: 18px; }
+        label { display: block; font-weight: 600; margin-bottom: 6px; font-size: 0.9rem; }
+        input[type="file"] { width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; }
+        button { width: 100%; background: #2563eb; color: white; border: none; padding: 12px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 1rem; }
+        button:hover:not(:disabled) { background: #1d4ed8; }
+        button:disabled { background: #94a3b8; cursor: not-allowed; }
+
+        .hidden { display: none; }
+
+        .status { margin-top: 18px; text-align: center; color: #475569; font-size: 0.9rem; }
+        .error { margin-top: 18px; padding: 14px; border-radius: 8px; background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; font-size: 0.9rem; }
+
+        .summary { margin-top: 24px; border-top: 1px solid #e2e8f0; padding-top: 20px; }
+        .summary h2 { font-size: 1.1rem; color: #1a202c; margin: 0 0 14px; }
+
+        .stats { display: flex; gap: 10px; margin-bottom: 18px; }
+        .stat { flex: 1; text-align: center; padding: 10px 6px; border-radius: 8px; background: #f8fafc; border: 1px solid #e2e8f0; }
+        .stat .num { display: block; font-size: 1.5rem; font-weight: 700; line-height: 1.2; }
+        .stat .lbl { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.03em; color: #64748b; }
+        .stat.upd .num { color: #2563eb; }
+        .stat.ins .num { color: #16a34a; }
+        .stat.unc .num { color: #64748b; }
+
+        .group { margin-bottom: 18px; }
+        .group h3 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.03em; color: #64748b; margin: 0 0 8px; }
+        ul.items { list-style: none; margin: 0; padding: 0; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; }
+        ul.items li { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 9px 12px; font-size: 0.88rem; border-bottom: 1px solid #f1f5f9; }
+        ul.items li:last-child { border-bottom: none; }
+        ul.items li:nth-child(even) { background: #fafbfc; }
+        .name { color: #1e293b; word-break: break-word; }
+        .price { white-space: nowrap; font-variant-numeric: tabular-nums; }
+        .old { color: #94a3b8; text-decoration: line-through; margin-right: 6px; }
+        .new { color: #2563eb; font-weight: 600; }
+        .added { color: #16a34a; font-weight: 600; }
+        .empty { color: #94a3b8; font-size: 0.85rem; font-style: italic; }
+
+        .download { display: block; width: 100%; box-sizing: border-box; margin-top: 6px; background: #16a34a; color: white; text-align: center; text-decoration: none; padding: 13px; border-radius: 6px; font-weight: bold; font-size: 1rem; }
+        .download:hover { background: #15803d; }
+        .restart { width: 100%; margin-top: 10px; background: none; color: #475569; border: 1px solid #cbd5e1; padding: 10px; font-weight: 600; font-size: 0.9rem; }
+        .restart:hover:not(:disabled) { background: #f1f5f9; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>Aggiorna Spesa da Scontrino</h1>
+
+        <form id="upload-form" action="/process/" method="post" enctype="multipart/form-data">
+            <div class="field">
+                <label>1. Carica il file ZIP di Backup (.zip)</label>
+                <input type="file" name="zip_file" accept=".zip" required>
+            </div>
+            <div class="field">
+                <label>2. Carica la foto dello Scontrino</label>
+                <input type="file" name="image_file" accept="image/*" capture="environment" required>
+            </div>
+            <button type="submit" id="submit-btn">Elabora Scontrino</button>
+        </form>
+
+        <p id="status" class="status hidden">Analisi dello scontrino in corso, può richiedere qualche minuto...</p>
+        <div id="error" class="error hidden"></div>
+
+        <div id="summary" class="summary hidden">
+            <h2>Riepilogo elaborazione</h2>
+
+            <div class="stats">
+                <div class="stat upd"><span class="num" id="n-upd">0</span><span class="lbl">Aggiornati</span></div>
+                <div class="stat ins"><span class="num" id="n-ins">0</span><span class="lbl">Aggiunti</span></div>
+                <div class="stat unc"><span class="num" id="n-unc">0</span><span class="lbl">Invariati</span></div>
+            </div>
+
+            <div class="group">
+                <h3>Prezzi aggiornati</h3>
+                <div id="list-upd"></div>
+            </div>
+
+            <div class="group">
+                <h3>Nuovi prodotti aggiunti</h3>
+                <div id="list-ins"></div>
+            </div>
+
+            <a id="download-link" class="download" href="#" download>Scarica il Backup aggiornato</a>
+            <button type="button" class="restart" id="restart-btn">Elabora un altro scontrino</button>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('upload-form');
+        const submitBtn = document.getElementById('submit-btn');
+        const statusEl = document.getElementById('status');
+        const errorEl = document.getElementById('error');
+        const summaryEl = document.getElementById('summary');
+        const downloadLink = document.getElementById('download-link');
+
+        const money = (v) => Number(v).toFixed(2).replace('.', ',') + ' €';
+
+        function renderList(container, items, emptyText, rowFn) {
+            container.innerHTML = '';
+            if (!items || items.length === 0) {
+                const p = document.createElement('p');
+                p.className = 'empty';
+                p.textContent = emptyText;
+                container.appendChild(p);
+                return;
+            }
+            const ul = document.createElement('ul');
+            ul.className = 'items';
+            for (const item of items) {
+                const li = document.createElement('li');
+
+                const name = document.createElement('span');
+                name.className = 'name';
+                name.textContent = item.name;
+                li.appendChild(name);
+
+                const price = document.createElement('span');
+                price.className = 'price';
+                rowFn(price, item);
+                li.appendChild(price);
+
+                ul.appendChild(li);
+            }
+            container.appendChild(ul);
+        }
+
+        function showSummary(data) {
+            document.getElementById('n-upd').textContent = data.updated_count;
+            document.getElementById('n-ins').textContent = data.inserted_count;
+            document.getElementById('n-unc').textContent = data.unchanged_count;
+
+            renderList(
+                document.getElementById('list-upd'),
+                data.updated,
+                'Nessun prezzo aggiornato: quelli in archivio erano già più bassi.',
+                (el, item) => {
+                    const oldEl = document.createElement('span');
+                    oldEl.className = 'old';
+                    oldEl.textContent = money(item.old_price);
+                    const newEl = document.createElement('span');
+                    newEl.className = 'new';
+                    newEl.textContent = money(item.new_price);
+                    el.appendChild(oldEl);
+                    el.appendChild(newEl);
+                }
+            );
+
+            renderList(
+                document.getElementById('list-ins'),
+                data.inserted,
+                'Nessun nuovo prodotto: erano tutti già in archivio.',
+                (el, item) => {
+                    const p = document.createElement('span');
+                    p.className = 'added';
+                    p.textContent = money(item.price);
+                    el.appendChild(p);
+                }
+            );
+
+            downloadLink.href = data.download_url;
+            summaryEl.classList.remove('hidden');
+        }
+
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault();
+
+            errorEl.classList.add('hidden');
+            summaryEl.classList.add('hidden');
+            statusEl.classList.remove('hidden');
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Elaborazione in corso...';
+
+            try {
+                const response = await fetch('/process/', {
+                    method: 'POST',
+                    body: new FormData(form)
+                });
+
+                if (!response.ok) {
+                    let detail = 'Errore ' + response.status;
+                    try {
+                        const body = await response.json();
+                        if (body.detail) { detail = body.detail; }
+                    } catch (_) { /* risposta non JSON: resta il codice di stato */ }
+                    throw new Error(detail);
+                }
+
+                showSummary(await response.json());
+                form.classList.add('hidden');
+            } catch (err) {
+                errorEl.textContent = 'Elaborazione fallita: ' + err.message;
+                errorEl.classList.remove('hidden');
+            } finally {
+                statusEl.classList.add('hidden');
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Elabora Scontrino';
+            }
+        });
+
+        document.getElementById('restart-btn').addEventListener('click', () => {
+            form.reset();
+            form.classList.remove('hidden');
+            summaryEl.classList.add('hidden');
+            errorEl.classList.add('hidden');
+        });
+    </script>
+</body>
+</html>
