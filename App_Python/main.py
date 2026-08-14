@@ -8,12 +8,24 @@ import base64
 from typing import List
 
 from fastapi import FastAPI, File, UploadFile, Request, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, FileResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 from anthropic import Anthropic
 
 app = FastAPI()
+
+# CORS aperto: l'app non usa cookie/sessioni (nessuna richiesta con credenziali),
+# quindi allow_origins="*" e' sicuro e serve al client Flutter (web/desktop) e a
+# eventuali altri frontend per chiamare le API da un'origine diversa.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Definizione del percorso assoluto per i templates
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
