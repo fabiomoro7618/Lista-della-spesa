@@ -37,6 +37,8 @@ dependencies:
 
   # Chiamate HTTP verso le API Python (FastAPI) in App_Python
   http: ^1.2.2
+  # Content-Type del multipart per l'upload della foto (MediaType)
+  http_parser: ^4.0.2
   # Selezione del file ZIP di backup e salvataggio dello ZIP aggiornato
   file_picker: ^8.1.6
   # Scatto/selezione della foto dello scontrino

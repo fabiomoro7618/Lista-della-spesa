@@ -1,8 +1,8 @@
 import 'dart:convert';
-import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 
 import '../config.dart';
 import '../models/process_result.dart';
@@ -16,30 +16,49 @@ class ApiException implements Exception {
 }
 
 /// Client per le API FastAPI esposte da App_Python/main.py.
+///
+/// I file vengono inviati sempre come byte in memoria (mai tramite path su
+/// disco), per funzionare in modo identico su mobile, desktop e Web — su
+/// Web non esiste un vero filesystem e `File.path`/`openRead()` sollevano
+/// eccezioni.
 class ReceiptApiService {
   final String baseUrl;
 
-  ReceiptApiService({this.baseUrl = ApiConfig.baseUrl});
+  // ApiConfig.baseUrl dipende dall'origine della pagina su Web, quindi non è
+  // più una costante di compilazione: il default va calcolato a runtime.
+  ReceiptApiService({String? baseUrl}) : baseUrl = baseUrl ?? ApiConfig.baseUrl;
 
   /// POST /process/ — invia lo ZIP di backup + la foto dello scontrino,
   /// riceve il riepilogo dell'elaborazione (vedi ProcessResult).
   Future<ProcessResult> processReceipt({
-    required File zipFile,
-    required File imageFile,
+    required Uint8List zipBytes,
+    required String zipFilename,
+    required Uint8List imageBytes,
+    required String imageFilename,
+    String? imageContentType,
   }) async {
     final uri = Uri.parse('$baseUrl/process/');
     final request = http.MultipartRequest('POST', uri)
-      ..files.add(await http.MultipartFile.fromPath('zip_file', zipFile.path))
-      ..files
-          .add(await http.MultipartFile.fromPath('image_file', imageFile.path));
+      ..files.add(http.MultipartFile.fromBytes(
+        'zip_file',
+        zipBytes,
+        filename: zipFilename,
+      ))
+      ..files.add(http.MultipartFile.fromBytes(
+        'image_file',
+        imageBytes,
+        filename: imageFilename,
+        contentType:
+            imageContentType != null ? MediaType.parse(imageContentType) : null,
+      ));
 
     final http.StreamedResponse streamed;
     try {
       streamed = await request.send();
-    } on SocketException {
+    } on http.ClientException catch (e) {
       throw ApiException(
-        'Impossibile raggiungere il server (${ApiConfig.baseUrl}). '
-        'Verifica che l\'API sia avviata e l\'indirizzo sia corretto.',
+        'Impossibile raggiungere il server ($baseUrl). '
+        'Verifica che l\'API sia avviata e l\'indirizzo sia corretto. ($e)',
       );
     }
     final response = await http.Response.fromStream(streamed);

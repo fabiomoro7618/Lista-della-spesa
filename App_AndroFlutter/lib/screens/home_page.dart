@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -17,25 +15,51 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   final _api = ReceiptApiService();
 
-  File? _zipFile;
-  File? _imageFile;
+  // Solo `name`/`bytes` (mai `path`): su Flutter Web non esiste un vero
+  // filesystem, quindi i file vengono tenuti sempre come byte in memoria.
+  PlatformFile? _zipPickedFile;
+  XFile? _imageFile;
   bool _loading = false;
   String? _error;
   ProcessResult? _result;
 
   String get _zipLabel =>
-      _zipFile == null ? 'Nessun file selezionato' : _zipFile!.path.split('/').last;
+      _zipPickedFile == null ? 'Nessun file selezionato' : _zipPickedFile!.name;
 
   String get _imageLabel =>
-      _imageFile == null ? 'Nessuna foto selezionata' : _imageFile!.path.split('/').last;
+      _imageFile == null ? 'Nessuna foto selezionata' : _imageFile!.name;
 
   Future<void> _pickZip() async {
-    final result = await FilePicker.platform.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: ['zip'],
-    );
-    if (result == null || result.files.single.path == null) return;
-    setState(() => _zipFile = File(result.files.single.path!));
+    try {
+      // file_picker non popola mai `path` su Web (solo `bytes`): la
+      // presenza del file viene comunque verificata sotto tramite
+      // `name`/`bytes`, non tramite `path`.
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['zip'],
+        withData: true,
+        allowMultiple: false,
+      );
+      if (result == null || result.files.isEmpty) return;
+      final picked = result.files.single;
+
+      if (picked.name.isEmpty || picked.bytes == null) {
+        setState(() => _error = 'Impossibile leggere il file selezionato.');
+        return;
+      }
+      if (!picked.name.toLowerCase().endsWith('.zip')) {
+        setState(() => _error = 'Seleziona un file con estensione .zip.');
+        return;
+      }
+
+      setState(() {
+        _error = null;
+        _zipPickedFile = picked;
+      });
+    } catch (e, stackTrace) {
+      debugPrint('Errore durante la selezione del file ZIP: $e\n$stackTrace');
+      setState(() => _error = 'Errore durante la selezione del file ZIP: $e');
+    }
   }
 
   Future<void> _pickImage() async {
@@ -62,11 +86,13 @@ class _HomePageState extends State<HomePage> {
 
     final picked = await ImagePicker().pickImage(source: source, imageQuality: 90);
     if (picked == null) return;
-    setState(() => _imageFile = File(picked.path));
+    setState(() => _imageFile = picked);
   }
 
   Future<void> _submit() async {
-    if (_zipFile == null || _imageFile == null) {
+    final zipPicked = _zipPickedFile;
+    final imagePicked = _imageFile;
+    if (zipPicked == null || zipPicked.bytes == null || imagePicked == null) {
       setState(() => _error = 'Seleziona sia lo ZIP di backup sia la foto dello scontrino.');
       return;
     }
@@ -77,7 +103,14 @@ class _HomePageState extends State<HomePage> {
     });
 
     try {
-      final result = await _api.processReceipt(zipFile: _zipFile!, imageFile: _imageFile!);
+      final imageBytes = await imagePicked.readAsBytes();
+      final result = await _api.processReceipt(
+        zipBytes: zipPicked.bytes!,
+        zipFilename: zipPicked.name,
+        imageBytes: imageBytes,
+        imageFilename: imagePicked.name,
+        imageContentType: imagePicked.mimeType,
+      );
       setState(() => _result = result);
     } catch (e) {
       setState(() => _error = 'Elaborazione fallita: $e');
@@ -118,7 +151,7 @@ class _HomePageState extends State<HomePage> {
 
   void _restart() {
     setState(() {
-      _zipFile = null;
+      _zipPickedFile = null;
       _imageFile = null;
       _result = null;
       _error = null;

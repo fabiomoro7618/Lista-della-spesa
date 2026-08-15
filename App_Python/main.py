@@ -16,13 +16,16 @@ from anthropic import Anthropic
 
 app = FastAPI()
 
-# CORS aperto: l'app non usa cookie/sessioni (nessuna richiesta con credenziali),
-# quindi allow_origins="*" e' sicuro e serve al client Flutter (web/desktop) e a
-# eventuali altri frontend per chiamare le API da un'origine diversa.
+# CORS aperto: serve al client Flutter (web/desktop, spesso su un'origine
+# diversa dall'API, es. Codespaces con porte forwardate su sottodomini
+# distinti) e a eventuali altri frontend per chiamare le API da un'origine
+# diversa. Con allow_credentials=True, Starlette rispecchia automaticamente
+# l'Origin della richiesta invece di restituire "*" letterale, come richiesto
+# dallo spec CORS quando le credenziali sono abilitate.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=False,
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
