@@ -40,119 +40,136 @@
      applicato sopra via prefers-color-scheme/[data-theme], come da regola
      per i design scuri di default. */
   :root {
-    --bg: #0B0F1C;
-    --surface: #141A2C;
-    --surface-raised: #1B2338;
-    --border: #2A3350;
-    --border-soft: #202942;
-    --ink: #E8ECF7;
-    --ink-muted: #8E98B8;
-    --ink-faint: #5D6685;
-    --accent: #7C9EFF;
-    --accent-strong: #A9C0FF;
-    --accent-ink: #0B0F1C;
+    /* Dark Slate / Cyberpunk (stile HMI industriale) — lettura primaria. */
+    --bg: #0D1117;
+    --surface: #161B22;
+    --surface-raised: #1C232C;
+    --border: rgba(139, 148, 158, 0.22);
+    --border-soft: rgba(139, 148, 158, 0.12);
+    --ink: #F0F6FC;
+    --ink-muted: #8B949E;
+    --ink-faint: #6E7681;
+    --accent: #22D3EE;
+    --accent-strong: #67E8F9;
+    --accent-ink: #0D1117;
 
-    --tier-fe: #7C9EFF;
-    --tier-fe-bg: rgba(124, 158, 255, 0.13);
-    --tier-be: #F2B84B;
-    --tier-be-bg: rgba(242, 184, 75, 0.13);
-    --tier-ai: #4FD6B0;
-    --tier-ai-bg: rgba(79, 214, 176, 0.13);
+    --tier-fe: #22D3EE;
+    --tier-fe-bg: rgba(34, 211, 238, 0.14);
+    --tier-be: #8B5CF6;
+    --tier-be-bg: rgba(139, 92, 246, 0.16);
+    --tier-ai: #4ADE80;
+    --tier-ai-bg: rgba(74, 222, 128, 0.14);
 
-    --status-ok: #4FD6B0;
-    --status-ok-bg: rgba(79, 214, 176, 0.14);
+    --status-ok: #4ADE80;
+    --status-ok-bg: rgba(74, 222, 128, 0.16);
+    --warn: #FBBF24;
+    --warn-bg: rgba(251, 191, 36, 0.14);
+    --danger: #F87171;
+    --danger-bg: rgba(248, 113, 113, 0.16);
 
-    --shadow-card: 0 24px 60px -28px rgba(0, 0, 0, 0.65);
-    --shadow-btn: 0 10px 24px -10px rgba(124, 158, 255, 0.55);
+    --shadow-card: 0 22px 55px -26px rgba(31, 41, 55, 0.85);
+    --shadow-btn: 0 10px 24px -10px rgba(34, 211, 238, 0.5);
 
     /* Il pannello "terminale" resta scuro in entrambi i temi: e' una scelta
        deliberata (un terminale e' sempre scuro), non un token che si
        inverte col tema della pagina. */
-    --term-bg: #080B15;
-    --term-ink: #C9D6F5;
+    --term-bg: #05070B;
+    --term-ink: #C9D6E4;
     --term-ink-dim: #6C7699;
-    --term-accent: #7ADBC2;
-    --term-border: #1C2338;
+    --term-accent: #4ADE80;
+    --term-border: rgba(139, 148, 158, 0.18);
   }
 
   @media (prefers-color-scheme: light) {
     :root:not([data-theme="dark"]) {
-      --bg: #F0F1F7;
+      --bg: #F2F4F8;
       --surface: #FFFFFF;
       --surface-raised: #F7F8FC;
-      --border: #DBDFEE;
-      --border-soft: #E6E9F5;
-      --ink: #171B2C;
-      --ink-muted: #565F82;
-      --ink-faint: #8991B3;
-      --accent: #3A57C4;
-      --accent-strong: #2A44A6;
+      --border: rgba(31, 41, 55, 0.14);
+      --border-soft: rgba(31, 41, 55, 0.08);
+      --ink: #0D1117;
+      --ink-muted: #57606A;
+      --ink-faint: #8B949E;
+      --accent: #0891B2;
+      --accent-strong: #0E7490;
       --accent-ink: #FFFFFF;
 
-      --tier-fe: #3A57C4;
-      --tier-fe-bg: rgba(58, 87, 196, 0.08);
-      --tier-be: #A8710A;
-      --tier-be-bg: rgba(168, 113, 10, 0.09);
-      --tier-ai: #0E8C68;
-      --tier-ai-bg: rgba(14, 140, 104, 0.09);
+      --tier-fe: #0891B2;
+      --tier-fe-bg: rgba(8, 145, 178, 0.09);
+      --tier-be: #7C3AED;
+      --tier-be-bg: rgba(124, 58, 237, 0.09);
+      --tier-ai: #16A34A;
+      --tier-ai-bg: rgba(22, 163, 74, 0.09);
 
-      --status-ok: #0E8C68;
-      --status-ok-bg: rgba(14, 140, 104, 0.09);
+      --status-ok: #16A34A;
+      --status-ok-bg: rgba(22, 163, 74, 0.09);
+      --warn: #B45309;
+      --warn-bg: rgba(180, 83, 9, 0.09);
+      --danger: #DC2626;
+      --danger-bg: rgba(220, 38, 38, 0.09);
 
-      --shadow-card: 0 20px 45px -28px rgba(30, 40, 90, 0.22);
-      --shadow-btn: 0 10px 22px -10px rgba(58, 87, 196, 0.35);
+      --shadow-card: 0 20px 45px -28px rgba(30, 40, 90, 0.2);
+      --shadow-btn: 0 10px 22px -10px rgba(8, 145, 178, 0.3);
     }
   }
 
   :root[data-theme="light"] {
-    --bg: #F0F1F7;
+    --bg: #F2F4F8;
     --surface: #FFFFFF;
     --surface-raised: #F7F8FC;
-    --border: #DBDFEE;
-    --border-soft: #E6E9F5;
-    --ink: #171B2C;
-    --ink-muted: #565F82;
-    --ink-faint: #8991B3;
-    --accent: #3A57C4;
-    --accent-strong: #2A44A6;
+    --border: rgba(31, 41, 55, 0.14);
+    --border-soft: rgba(31, 41, 55, 0.08);
+    --ink: #0D1117;
+    --ink-muted: #57606A;
+    --ink-faint: #8B949E;
+    --accent: #0891B2;
+    --accent-strong: #0E7490;
     --accent-ink: #FFFFFF;
 
-    --tier-fe: #3A57C4;
-    --tier-fe-bg: rgba(58, 87, 196, 0.08);
-    --tier-be: #A8710A;
-    --tier-be-bg: rgba(168, 113, 10, 0.09);
-    --tier-ai: #0E8C68;
-    --tier-ai-bg: rgba(14, 140, 104, 0.09);
+    --tier-fe: #0891B2;
+    --tier-fe-bg: rgba(8, 145, 178, 0.09);
+    --tier-be: #7C3AED;
+    --tier-be-bg: rgba(124, 58, 237, 0.09);
+    --tier-ai: #16A34A;
+    --tier-ai-bg: rgba(22, 163, 74, 0.09);
 
-    --status-ok: #0E8C68;
-    --status-ok-bg: rgba(14, 140, 104, 0.09);
+    --status-ok: #16A34A;
+    --status-ok-bg: rgba(22, 163, 74, 0.09);
+    --warn: #B45309;
+    --warn-bg: rgba(180, 83, 9, 0.09);
+    --danger: #DC2626;
+    --danger-bg: rgba(220, 38, 38, 0.09);
 
-    --shadow-card: 0 20px 45px -28px rgba(30, 40, 90, 0.22);
-    --shadow-btn: 0 10px 22px -10px rgba(58, 87, 196, 0.35);
+    --shadow-card: 0 20px 45px -28px rgba(30, 40, 90, 0.2);
+    --shadow-btn: 0 10px 22px -10px rgba(8, 145, 178, 0.3);
   }
 
   :root[data-theme="dark"] {
-    --bg: #0B0F1C;
-    --surface: #141A2C;
-    --surface-raised: #1B2338;
-    --border: #2A3350;
-    --border-soft: #202942;
-    --ink: #E8ECF7;
-    --ink-muted: #8E98B8;
-    --ink-faint: #5D6685;
-    --accent: #7C9EFF;
-    --accent-strong: #A9C0FF;
-    --accent-ink: #0B0F1C;
+    --bg: #0D1117;
+    --surface: #161B22;
+    --surface-raised: #1C232C;
+    --border: rgba(139, 148, 158, 0.22);
+    --border-soft: rgba(139, 148, 158, 0.12);
+    --ink: #F0F6FC;
+    --ink-muted: #8B949E;
+    --ink-faint: #6E7681;
+    --accent: #22D3EE;
+    --accent-strong: #67E8F9;
+    --accent-ink: #0D1117;
 
-    --tier-fe: #7C9EFF;
-    --tier-fe-bg: rgba(124, 158, 255, 0.13);
-    --tier-be: #F2B84B;
-    --tier-be-bg: rgba(242, 184, 75, 0.13);
-    --tier-ai: #4FD6B0;
-    --tier-ai-bg: rgba(79, 214, 176, 0.13);
+    --tier-fe: #22D3EE;
+    --tier-fe-bg: rgba(34, 211, 238, 0.14);
+    --tier-be: #8B5CF6;
+    --tier-be-bg: rgba(139, 92, 246, 0.16);
+    --tier-ai: #4ADE80;
+    --tier-ai-bg: rgba(74, 222, 128, 0.14);
 
-    --status-ok: #4FD6B0;
-    --status-ok-bg: rgba(79, 214, 176, 0.14);
+    --status-ok: #4ADE80;
+    --status-ok-bg: rgba(74, 222, 128, 0.16);
+    --warn: #FBBF24;
+    --warn-bg: rgba(251, 191, 36, 0.14);
+    --danger: #F87171;
+    --danger-bg: rgba(248, 113, 113, 0.16);
   }
 
   * { box-sizing: border-box; }
@@ -160,7 +177,12 @@
 
   body {
     margin: 0;
-    background: var(--bg);
+    background-color: var(--bg);
+    /* Griglia sottile in stile schema HMI industriale, sotto al contenuto. */
+    background-image:
+      linear-gradient(var(--border-soft) 1px, transparent 1px),
+      linear-gradient(90deg, var(--border-soft) 1px, transparent 1px);
+    background-size: 34px 34px;
     color: var(--ink);
     font-family: 'Plex Sans', -apple-system, 'Segoe UI', sans-serif;
     font-size: 16px;
@@ -344,6 +366,10 @@
     border-color: var(--border);
     color: var(--ink-muted);
   }
+  /* Bagliore tipo LED sui pill colorati: coerente con l'estetica HMI. */
+  .pill-fe, .pill-be, .pill-ai, .pill-status {
+    box-shadow: 0 0 14px -6px currentColor;
+  }
   .pill-fe { background: var(--tier-fe-bg); color: var(--tier-fe); }
   .pill-be { background: var(--tier-be-bg); color: var(--tier-be); }
   .pill-ai { background: var(--tier-ai-bg); color: var(--tier-ai); }
@@ -354,8 +380,22 @@
   .pill-status .dot {
     width: 6px; height: 6px; border-radius: 50%;
     background: currentColor;
-    box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 22%, transparent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 22%, transparent), 0 0 8px currentColor;
   }
+
+  /* Flag rosso/giallo per avvisi puntuali nel testo (es. errori noti). */
+  .flag {
+    display: inline-flex;
+    align-items: center;
+    padding: 1px 7px;
+    border-radius: 5px;
+    font-family: 'Plex Mono', monospace;
+    font-size: 0.85em;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .flag-danger { background: var(--danger-bg); color: var(--danger); }
+  .flag-warn { background: var(--warn-bg); color: var(--warn); }
 
   /* perforazione stile "strappo scontrino" */
   .tear {
@@ -416,6 +456,7 @@
     align-items: center;
     justify-content: center;
     margin-bottom: 14px;
+    box-shadow: 0 0 16px -6px currentColor;
   }
   .tier-card[data-tier="fe"] .tier-icon { background: var(--tier-fe-bg); color: var(--tier-fe); }
   .tier-card[data-tier="be"] .tier-icon { background: var(--tier-be-bg); color: var(--tier-be); }
@@ -609,19 +650,19 @@
   .c-str { color: #A7D4A3; }
   .c-kw { color: #C9A6FF; }
 
-  /* ============ CALLOUT ============ */
+  /* ============ CALLOUT (avviso, colore giallo/ambra) ============ */
   .callout {
     display: flex;
     gap: 14px;
     padding: 16px 18px;
     border-radius: 10px;
-    border: 1px solid color-mix(in srgb, var(--tier-be) 45%, var(--border));
-    background: var(--tier-be-bg);
+    border: 1px solid color-mix(in srgb, var(--warn) 45%, var(--border));
+    background: var(--warn-bg);
     margin: 22px 0;
   }
   .callout svg {
     width: 20px; height: 20px; flex: none; margin-top: 2px;
-    color: var(--tier-be);
+    color: var(--warn);
   }
   .callout strong { color: var(--ink); }
   .callout p { margin: 4px 0 0; color: var(--ink-muted); font-size: 0.92rem; }
@@ -855,7 +896,7 @@
           aprire un dialogo di salvataggio nativo,
           <strong>FilePicker.platform.saveFile()</strong>, non e'
           implementato in questa configurazione e solleva
-          <strong>UnimplementedError</strong>. Per bypassare questo limite,
+          <span class="flag flag-danger mono">UnimplementedError</span>. Per bypassare questo limite,
           il download del backup passa direttamente da un
           <strong>Blob del DOM</strong>: i byte dello ZIP ricevuti dal
           backend vengono incapsulati in un Blob, trasformati in un URL
@@ -875,7 +916,7 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
           <div>
             <strong>Attenzione alla cache del browser</strong>
-            <p>Anche dopo una nuova build, il service worker di Flutter Web puo' continuare a servire il vecchio bundle. Il numero di versione in AppBar (<code class="mono">v1.0.1</code>) e' li' apposta: se non cambia dopo un deploy, serve un hard refresh.</p>
+            <p>Anche dopo una nuova build, il service worker di Flutter Web puo' continuare a servire il vecchio bundle. Il numero di versione in AppBar (<code class="mono">v1.0.1</code>) e' li' apposta: se non cambia dopo un deploy, serve un <span class="flag flag-warn mono">hard refresh</span>.</p>
           </div>
         </div>
       </div>
