@@ -18,3 +18,6 @@ _backup ShoppingListBackup/
 **/__pycache__/
 *.pyc
 .venv/
+
+# MkDocs
+site/

@@ -1,0 +1,60 @@
+site_name: Lista della Spesa — Documentazione
+site_description: >-
+  Documentazione tecnica di "Aggiorna Spesa da Scontrino": backend FastAPI,
+  UI Flutter Web e integrazione con Claude per l'estrazione dati dagli
+  scontrini.
+site_author: fabiomoro7618
+repo_url: https://github.com/fabiomoro7618/Lista-della-spesa
+repo_name: fabiomoro7618/Lista-della-spesa
+
+theme:
+  name: material
+  language: it
+  palette:
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-night
+        name: Passa al tema chiaro
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-sunny
+        name: Passa al tema scuro
+  features:
+    - navigation.tabs
+    - navigation.top
+    - navigation.tracking
+    - navigation.instant
+    - content.code.copy
+    - toc.follow
+  icon:
+    repo: fontawesome/brands/github
+
+nav:
+  - Home: index.md
+  - Architettura & Backend: architettura.md
+  - Flutter Web UI: flutter_web.md
+  - Guida Riavvio Server: guida_server.md
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - tables
+  - toc:
+      permalink: true
+      title: In questa pagina
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/fabiomoro7618/Lista-della-spesa
