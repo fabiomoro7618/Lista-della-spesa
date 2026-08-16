@@ -9,6 +9,7 @@
 
 # File sensibili e scorciatoie
 anthropic key.txt
+.env
 *.lnk
 SharedScreenshot.jpg
 _backup ShoppingListBackup/

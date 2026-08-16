@@ -25,9 +25,8 @@ def test_home_page_ok():
 
 
 def test_cors_preflight_allows_any_origin():
-    # Con allow_credentials=True, Starlette rispecchia l'Origin esatta della
-    # richiesta invece di restituire "*" letterale (richiesto dallo spec
-    # CORS quando le credenziali sono abilitate).
+    # Con allow_credentials=False, Starlette restituisce "*" letterale
+    # (ammesso dallo spec CORS solo quando le credenziali sono disabilitate).
     response = client.options(
         "/process/",
         headers={
@@ -37,16 +36,32 @@ def test_cors_preflight_allows_any_origin():
         },
     )
     assert response.status_code == 200
-    assert response.headers.get("access-control-allow-origin") == "http://example.com"
-    assert response.headers.get("access-control-allow-credentials") == "true"
+    assert response.headers.get("access-control-allow-origin") == "*"
+    assert response.headers.get("access-control-allow-credentials") is None
     assert "POST" in response.headers.get("access-control-allow-methods", "")
 
 
 def test_cors_header_present_on_get():
     response = client.get("/", headers={"Origin": "http://example.com"})
     assert response.status_code == 200
-    assert response.headers.get("access-control-allow-origin") == "http://example.com"
-    assert response.headers.get("access-control-allow-credentials") == "true"
+    assert response.headers.get("access-control-allow-origin") == "*"
+
+
+def test_unhandled_exception_still_has_cors_header():
+    # Un errore non gestito deve comunque ricevere gli header CORS, altrimenti
+    # il browser lo segnala come "Failed to fetch" invece di mostrare
+    # l'errore reale (vedi unhandled_exception_handler in main.py).
+    response = client.post(
+        "/process/",
+        headers={"Origin": "http://example.com"},
+        files={
+            "zip_file": ("backup.zip", b"non e' uno zip valido", "application/zip"),
+            "image_file": ("scontrino.jpg", b"\xff\xd8\xff", "image/jpeg"),
+        },
+    )
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Il file ZIP di backup non è valido."
+    assert response.headers.get("access-control-allow-origin") == "*"
 
 
 def test_download_with_malformed_token_returns_404():

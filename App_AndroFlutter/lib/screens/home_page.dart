@@ -1,9 +1,12 @@
+import 'dart:typed_data';
+
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 
 import '../models/process_result.dart';
 import '../services/receipt_api_service.dart';
+import '../services/web_downloader.dart';
+import '../version.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -17,8 +20,15 @@ class _HomePageState extends State<HomePage> {
 
   // Solo `name`/`bytes` (mai `path`): su Flutter Web non esiste un vero
   // filesystem, quindi i file vengono tenuti sempre come byte in memoria.
+  // Anche la foto viene selezionata con file_picker (withData: true) invece
+  // di image_picker: XFile.readAsBytes() su Web legge da un URL blob: che il
+  // browser puo' revocare nel frattempo, causando "Could not load Blob from
+  // its URL. Has it been revoked?" all'invio. file_picker restituisce invece
+  // i byte gia' pronti in PlatformFile.bytes, senza mai passare da un URL.
   PlatformFile? _zipPickedFile;
-  XFile? _imageFile;
+  Uint8List? _imageBytes;
+  String? _imageName;
+  String? _imageMimeType;
   bool _loading = false;
   String? _error;
   ProcessResult? _result;
@@ -26,8 +36,7 @@ class _HomePageState extends State<HomePage> {
   String get _zipLabel =>
       _zipPickedFile == null ? 'Nessun file selezionato' : _zipPickedFile!.name;
 
-  String get _imageLabel =>
-      _imageFile == null ? 'Nessuna foto selezionata' : _imageFile!.name;
+  String get _imageLabel => _imageName ?? 'Nessuna foto selezionata';
 
   Future<void> _pickZip() async {
     try {
@@ -63,36 +72,53 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _pickImage() async {
-    final source = await showModalBottomSheet<ImageSource>(
-      context: context,
-      builder: (context) => SafeArea(
-        child: Wrap(
-          children: [
-            ListTile(
-              leading: const Icon(Icons.photo_camera),
-              title: const Text('Scatta foto'),
-              onTap: () => Navigator.pop(context, ImageSource.camera),
-            ),
-            ListTile(
-              leading: const Icon(Icons.photo_library),
-              title: const Text('Scegli dalla galleria'),
-              onTap: () => Navigator.pop(context, ImageSource.gallery),
-            ),
-          ],
-        ),
-      ),
-    );
-    if (source == null) return;
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.image,
+        withData: true,
+        allowMultiple: false,
+      );
+      if (result == null || result.files.isEmpty) return;
+      final picked = result.files.first;
 
-    final picked = await ImagePicker().pickImage(source: source, imageQuality: 90);
-    if (picked == null) return;
-    setState(() => _imageFile = picked);
+      if (picked.name.isEmpty || picked.bytes == null) {
+        setState(() => _error = 'Impossibile leggere la foto selezionata.');
+        return;
+      }
+
+      setState(() {
+        _error = null;
+        _imageBytes = picked.bytes;
+        _imageName = picked.name;
+        _imageMimeType = _mimeTypeFromName(picked.name);
+      });
+    } catch (e, stackTrace) {
+      debugPrint('Errore durante la selezione della foto: $e\n$stackTrace');
+      setState(() => _error = 'Errore durante la selezione della foto: $e');
+    }
+  }
+
+  static String? _mimeTypeFromName(String name) {
+    final ext = name.toLowerCase().split('.').last;
+    switch (ext) {
+      case 'jpg':
+      case 'jpeg':
+        return 'image/jpeg';
+      case 'png':
+        return 'image/png';
+      case 'gif':
+        return 'image/gif';
+      case 'webp':
+        return 'image/webp';
+      default:
+        return null;
+    }
   }
 
   Future<void> _submit() async {
     final zipPicked = _zipPickedFile;
-    final imagePicked = _imageFile;
-    if (zipPicked == null || zipPicked.bytes == null || imagePicked == null) {
+    final imageBytes = _imageBytes;
+    if (zipPicked == null || zipPicked.bytes == null || imageBytes == null) {
       setState(() => _error = 'Seleziona sia lo ZIP di backup sia la foto dello scontrino.');
       return;
     }
@@ -103,13 +129,12 @@ class _HomePageState extends State<HomePage> {
     });
 
     try {
-      final imageBytes = await imagePicked.readAsBytes();
       final result = await _api.processReceipt(
         zipBytes: zipPicked.bytes!,
         zipFilename: zipPicked.name,
         imageBytes: imageBytes,
-        imageFilename: imagePicked.name,
-        imageContentType: imagePicked.mimeType,
+        imageFilename: _imageName!,
+        imageContentType: _imageMimeType,
       );
       setState(() => _result = result);
     } catch (e) {
@@ -130,18 +155,15 @@ class _HomePageState extends State<HomePage> {
 
     try {
       final bytes = await _api.downloadBackup(result.downloadUrl);
-      final savedPath = await FilePicker.platform.saveFile(
-        dialogTitle: 'Salva il backup aggiornato',
-        fileName: 'Backup_Aggiornato.zip',
-        bytes: bytes,
-      );
+      // Download diretto via Blob (dart:html), MAI tramite FilePicker: su
+      // Flutter Web FilePicker.platform.saveFile() non e' implementato e
+      // solleva UnimplementedError.
+      saveBytesAsFile(bytes, 'ShoppingList_BACKUP_aggiornato.zip');
 
       if (!mounted) return;
-      if (savedPath != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Backup salvato con successo.')),
-        );
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Backup scaricato con successo.')),
+      );
     } catch (e) {
       setState(() => _error = 'Download fallito: $e');
     } finally {
@@ -152,7 +174,9 @@ class _HomePageState extends State<HomePage> {
   void _restart() {
     setState(() {
       _zipPickedFile = null;
-      _imageFile = null;
+      _imageBytes = null;
+      _imageName = null;
+      _imageMimeType = null;
       _result = null;
       _error = null;
     });
@@ -161,7 +185,7 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Aggiorna Spesa da Scontrino')),
+      appBar: AppBar(title: const Text('Aggiorna Spesa da Scontrino $appVersion')),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(16),
@@ -266,31 +290,8 @@ class _HomePageState extends State<HomePage> {
               const _EmptyNote('Nessun prezzo aggiornato: quelli in archivio erano già più bassi.')
             else
               _ItemList(
-                children: result.updated
-                    .map((item) => _ItemRow(
-                          name: item.name,
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                _money(item.oldPrice),
-                                style: const TextStyle(
-                                  color: Color(0xFF94A3B8),
-                                  decoration: TextDecoration.lineThrough,
-                                ),
-                              ),
-                              const SizedBox(width: 6),
-                              Text(
-                                _money(item.newPrice),
-                                style: const TextStyle(
-                                  color: Color(0xFF2563EB),
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ))
-                    .toList(),
+                children:
+                    result.updated.map((item) => _UpdatedItemRow(item: item)).toList(),
               ),
             const SizedBox(height: 18),
             Text('Nuovi prodotti aggiunti', style: Theme.of(context).textTheme.labelLarge),
@@ -303,7 +304,7 @@ class _HomePageState extends State<HomePage> {
                     .map((item) => _ItemRow(
                           name: item.name,
                           trailing: Text(
-                            _money(item.price),
+                            _formatMoney(item.price),
                             style: const TextStyle(
                               color: Color(0xFF16A34A),
                               fontWeight: FontWeight.w600,
@@ -311,6 +312,26 @@ class _HomePageState extends State<HomePage> {
                           ),
                         ))
                     .toList(),
+              ),
+            const SizedBox(height: 18),
+            if (result.unchanged.isNotEmpty)
+              Theme(
+                data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+                child: ExpansionTile(
+                  tilePadding: EdgeInsets.zero,
+                  childrenPadding: EdgeInsets.zero,
+                  title: Text(
+                    'Prodotti invariati (${result.unchanged.length})',
+                    style: Theme.of(context).textTheme.labelLarge,
+                  ),
+                  children: [
+                    _ItemList(
+                      children: result.unchanged
+                          .map((item) => _UnchangedItemRow(item: item))
+                          .toList(),
+                    ),
+                  ],
+                ),
               ),
             const SizedBox(height: 24),
             FilledButton.icon(
@@ -334,8 +355,9 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  String _money(double v) => '${v.toStringAsFixed(2).replaceAll('.', ',')} €';
 }
+
+String _formatMoney(double v) => '${v.toStringAsFixed(2).replaceAll('.', ',')} €';
 
 class _StatTile extends StatelessWidget {
   final String label;
@@ -410,6 +432,134 @@ class _ItemRow extends StatelessWidget {
           ),
           const SizedBox(width: 12),
           trailing,
+        ],
+      ),
+    );
+  }
+}
+
+class _UpdatedItemRow extends StatelessWidget {
+  final UpdatedItem item;
+
+  const _UpdatedItemRow({required this.item});
+
+  @override
+  Widget build(BuildContext context) {
+    // Il backend aggiorna solo quando old_price == 0 (prezzo mai registrato
+    // prima) oppure quando il nuovo prezzo e' piu' basso: nel primo caso non
+    // esiste un vero risparmio da mostrare, solo un prezzo aggiunto.
+    final hasOldPrice = item.oldPrice > 0;
+    final savings = item.oldPrice - item.newPrice;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+      decoration: const BoxDecoration(
+        border: Border(bottom: BorderSide(color: Color(0xFFF1F5F9))),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Expanded(
+            child: Text(item.name, style: const TextStyle(color: Color(0xFF1E293B))),
+          ),
+          const SizedBox(width: 12),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (hasOldPrice) ...[
+                    Text(
+                      _formatMoney(item.oldPrice),
+                      style: const TextStyle(
+                        color: Color(0xFF94A3B8),
+                        decoration: TextDecoration.lineThrough,
+                        fontSize: 13,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                  ],
+                  Text(
+                    _formatMoney(item.newPrice),
+                    style: const TextStyle(
+                      color: Color(0xFF2563EB),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 2),
+              if (hasOldPrice && savings > 0)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFDCFCE7),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    '- ${_formatMoney(savings)}',
+                    style: const TextStyle(
+                      color: Color(0xFF16A34A),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                )
+              else if (!hasOldPrice)
+                const Text(
+                  'Prezzo aggiunto',
+                  style: TextStyle(
+                    color: Color(0xFF94A3B8),
+                    fontSize: 11,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _UnchangedItemRow extends StatelessWidget {
+  final UnchangedItem item;
+
+  const _UnchangedItemRow({required this.item});
+
+  @override
+  Widget build(BuildContext context) {
+    final priceDiffers = item.receiptPrice != item.currentPrice;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+      decoration: const BoxDecoration(
+        border: Border(bottom: BorderSide(color: Color(0xFFF1F5F9))),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(item.name, style: const TextStyle(color: Color(0xFF1E293B))),
+                if (priceDiffers) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    'Prezzo sullo scontrino: ${_formatMoney(item.receiptPrice)}',
+                    style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 11),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          Text(
+            _formatMoney(item.currentPrice),
+            style: const TextStyle(color: Color(0xFF64748B), fontWeight: FontWeight.w600),
+          ),
         ],
       ),
     );
