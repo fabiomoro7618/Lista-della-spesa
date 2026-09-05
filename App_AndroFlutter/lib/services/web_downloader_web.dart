@@ -1,3 +1,8 @@
+// dart:html e' deprecato e web-only per scelta deliberata: questo file
+// viene incluso solo in build Web tramite import condizionale (vedi
+// web_downloader.dart), quindi i due avvisi non si applicano davvero.
+// ignore_for_file: deprecated_member_use, avoid_web_libraries_in_flutter
+
 import 'dart:html' as html;
 import 'dart:typed_data';
 

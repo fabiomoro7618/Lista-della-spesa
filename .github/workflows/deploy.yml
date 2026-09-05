@@ -1,0 +1,71 @@
+name: Deploy Flutter Web su GitHub Pages
+
+# Ricompila App_AndroFlutter per il Web e pubblica build/web su GitHub
+# Pages tramite le Action ufficiali (nessun branch gh-pages da gestire a
+# mano: il deploy avviene tramite l'ambiente "github-pages" nativo di
+# GitHub, configurabile in Settings → Pages → Source → GitHub Actions).
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "App_AndroFlutter/**"
+      - ".github/workflows/deploy.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Evita deploy concorrenti sullo stesso ambiente Pages.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: App_AndroFlutter
+    steps:
+      - name: Checkout del repository
+        uses: actions/checkout@v4
+
+      - name: Configura Flutter SDK
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.0"
+          channel: stable
+
+      - name: Installa le dipendenze
+        run: flutter pub get
+
+      - name: Analizza il codice
+        run: flutter analyze
+
+      - name: Compila Flutter Web
+        # --base-href e' necessario perche' un repository "di progetto" (non
+        # <utente>.github.io) viene servito da Pages sotto un sottopercorso
+        # /<nome-repo>/, non alla radice del dominio.
+        run: flutter build web --release --base-href "/${{ github.event.repository.name }}/"
+
+      - name: Configura GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Carica l'artifact per Pages
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: App_AndroFlutter/build/web
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Pubblica su GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
