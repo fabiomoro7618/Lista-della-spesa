@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -23,6 +24,13 @@ class ApiException implements Exception {
 /// eccezioni.
 class ReceiptApiService {
   final String baseUrl;
+
+  // Senza un timeout esplicito, una richiesta che non riceve mai risposta
+  // (backend addormentato su Render free tier, problema di rete, CORS
+  // bloccato silenziosamente dal browser) lascia l'app in caricamento
+  // infinito: il Future di http non si completa mai, ne' con successo ne'
+  // con un errore da mostrare all'utente.
+  static const Duration _timeout = Duration(seconds: 60);
 
   // ApiConfig.baseUrl dipende dall'origine della pagina su Web, quindi non è
   // più una costante di compilazione: il default va calcolato a runtime.
@@ -54,14 +62,19 @@ class ReceiptApiService {
 
     final http.StreamedResponse streamed;
     try {
-      streamed = await request.send();
+      streamed = await request.send().timeout(_timeout);
+    } on TimeoutException {
+      throw ApiException(_timeoutMessage);
     } on http.ClientException catch (e) {
-      throw ApiException(
-        'Impossibile raggiungere il server ($baseUrl). '
-        'Verifica che l\'API sia avviata e l\'indirizzo sia corretto. ($e)',
-      );
+      throw ApiException(_connectionErrorMessage(e));
     }
-    final response = await http.Response.fromStream(streamed);
+
+    final http.Response response;
+    try {
+      response = await http.Response.fromStream(streamed).timeout(_timeout);
+    } on TimeoutException {
+      throw ApiException(_timeoutMessage);
+    }
 
     if (response.statusCode != 200) {
       throw ApiException(_extractErrorDetail(response));
@@ -75,7 +88,15 @@ class ReceiptApiService {
   /// GET {downloadUrl} — scarica lo ZIP di backup aggiornato.
   Future<Uint8List> downloadBackup(String downloadUrl) async {
     final uri = Uri.parse('$baseUrl$downloadUrl');
-    final response = await http.get(uri);
+
+    final http.Response response;
+    try {
+      response = await http.get(uri).timeout(_timeout);
+    } on TimeoutException {
+      throw ApiException(_timeoutMessage);
+    } on http.ClientException catch (e) {
+      throw ApiException(_connectionErrorMessage(e));
+    }
 
     if (response.statusCode != 200) {
       throw ApiException(_extractErrorDetail(response));
@@ -83,6 +104,16 @@ class ReceiptApiService {
 
     return response.bodyBytes;
   }
+
+  String get _timeoutMessage =>
+      'Il server non ha risposto entro ${_timeout.inSeconds} secondi. '
+      'Se il backend è ospitato su un piano gratuito (es. Render), potrebbe '
+      'essersi "addormentato" per inattività: riprova tra qualche istante.';
+
+  String _connectionErrorMessage(http.ClientException e) =>
+      'Impossibile raggiungere il server ($baseUrl). '
+      'Verifica la connessione a internet, che il backend sia attivo e che '
+      'le impostazioni CORS del server permettano questa origine. ($e)';
 
   String _extractErrorDetail(http.Response response) {
     try {

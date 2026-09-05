@@ -24,6 +24,12 @@ def test_home_page_ok():
     assert "Aggiorna Spesa" in response.text
 
 
+def test_health_check_ok():
+    response = client.get("/health")
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok"}
+
+
 def test_cors_preflight_allows_any_origin():
     # Con allow_credentials=False, Starlette restituisce "*" letterale
     # (ammesso dallo spec CORS solo quando le credenziali sono disabilitate).

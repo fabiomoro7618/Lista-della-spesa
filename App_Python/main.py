@@ -111,6 +111,15 @@ async def home(request: Request):
     # Sintassi aggiornata per Jinja2 / Starlette
     return templates.TemplateResponse(request=request, name="index.html")
 
+
+@app.get("/health")
+async def health_check():
+    # Endpoint leggero (nessuna dipendenza da SQLite/Claude) per verificare
+    # rapidamente se il server e' raggiungibile e sveglio, es. dopo lo
+    # spegnimento per inattivita' del piano gratuito di Render.
+    return {"status": "ok"}
+
+
 @app.post("/process/")
 async def process_receipt(zip_file: UploadFile = File(...), image_file: UploadFile = File(...)):
     # L'intero corpo e' avvolto in un try/except che converte qualsiasi
